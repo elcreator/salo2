@@ -1,0 +1,35 @@
+FROM php:8.5-apache
+RUN apt-get update && apt-get install -y \
+        libfreetype6-dev \
+        libjpeg62-turbo-dev \
+        libpng-dev \
+        libzip-dev \
+        libpq-dev \
+        unzip \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) gd
+
+RUN a2enmod rewrite
+
+#RUN apt-get update && apt-get install -y \
+#    imagemagick libmagickwand-dev --no-install-recommends \
+#    && pecl install imagick \
+#    && docker-php-ext-enable imagick
+
+RUN docker-php-ext-install mysqli pdo pdo_mysql pdo_pgsql pgsql zip
+
+# xdebug ships through PECL, not with the php sources, so it cannot go into the
+# docker-php-ext-install line above. PHP 8.5 needs xdebug 3.5 or newer.
+RUN pecl install xdebug \
+    && docker-php-ext-enable xdebug
+
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+RUN apt-get install -y \
+        git \
+        tree \
+        vim \
+        wget \
+        subversion
+
+ADD php.ini /usr/local/etc/php/conf.d/40-custom.ini
