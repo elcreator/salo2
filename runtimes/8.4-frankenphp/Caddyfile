@@ -1,0 +1,37 @@
+{
+	frankenphp
+	# The container is reached over plain HTTP; TLS is whatever fronts it.
+	auto_https off
+}
+
+:80 {
+	root /var/www/html
+	encode zstd gzip
+
+	# Caddy sorts directives by its own order rather than by the order they are
+	# written, and rewrite would otherwise run before respond — the deny matcher
+	# would then be testing "/index.php" instead of the requested path, and the
+	# asset rules would never fire. "route" pins these three to this order.
+	route {
+		# Dotfiles and PHP inside the asset trees stay unreachable, mirroring
+		# the deny rules in ht.access and ng.inx.
+		@denied path_regexp ^/\.|^/assets/(\.thumbs|snippets/summary|snippets/DocLister|site|lib|js|import|images|files|export|docs)/.+\.php$
+		respond @denied 404
+
+		# Friendly URLs. try_files cannot express this: a fallback carrying a
+		# query string ("/index.php?q=...") never matches here, so the request
+		# has to be rewritten explicitly instead.
+		#
+		# The matcher has to consider directory indexes as well as plain files,
+		# or "/" and "/manager/" get rewritten into index.php?q=/ and fail —
+		# only a path that resolves to nothing is a friendly URL.
+		@notfile {
+			not file {
+				try_files {path} {path}/index.php {path}/index.html
+			}
+		}
+		rewrite @notfile /index.php?q={path}&{query}
+
+		php_server
+	}
+}
