@@ -18,6 +18,17 @@
 		@denied path_regexp ^/\.|^/assets/(\.thumbs|snippets/summary|snippets/DocLister|site|lib|js|import|images|files|export|docs)/.+\.php$
 		respond @denied 404
 
+		# What manager/.htaccess does on Apache: a path under /manager/ that is not a
+		# file goes to the manager's front controller, never to the site's. EvoUI, on
+		# Evolution 3.6, serves the Livewire script and its updates from such routes.
+		@manager {
+			path /manager/*
+			not file {
+				try_files {path} {path}/index.php {path}/index.html
+			}
+		}
+		rewrite @manager /manager/index.php?{query}
+
 		# Friendly URLs. try_files cannot express this: a fallback carrying a
 		# query string ("/index.php?q=...") never matches here, so the request
 		# has to be rewritten explicitly instead.
